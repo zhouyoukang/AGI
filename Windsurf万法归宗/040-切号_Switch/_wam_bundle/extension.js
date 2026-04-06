@@ -287,8 +287,7 @@ function cleanupThirdPartyState() {
     try { if (fs.existsSync(f)) { fs.unlinkSync(f); cleaned++; log(`cleanup: deleted ${path.basename(f)}`); } } catch (e) { log(`cleanup: failed ${path.basename(f)}: ${e.message}`); }
   }
   // 停止所有引擎
-  if (_monitorTimer) { clearTimeout(_monitorTimer); _monitorTimer = null; log('cleanup: monitor stopped'); }
-  if (_scanTimer) { clearInterval(_scanTimer); _scanTimer = null; log('cleanup: scanner stopped'); }
+  _stopEngines();
   if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
   // 清除内存状态并落盘 (防止重启后恢复旧数据)
   _quotaSnapshots.clear();
@@ -1761,9 +1760,42 @@ async function switchToAccount(email, password) {
 
 // ============================================================
 // 实时额度监测引擎 — 反者道之动
-// 活跃账号快速监测(8s) + 全量后台扫描(120s)
+// 活跃账号快速监测(3s) + 全量后台扫描(45s)
 // 额度变动 → 标记使用中 → 自动切号 → 变动停止 → 标记消失
+// 引擎生命周期: _ensureEngines() 按需启动 / _stopEngines() 安全停止
+// monitor 与 scan 各自独立, 互不干扰:
+//   - monitor 只管活跃账号, scan 只管非活跃账号 (disjoint sets)
+//   - 两者共享 _quotaFetchCooldown (per-account rate limit) 避免重复请求
+//   - _switching flag 是唯一互斥点: 切号时两者都暂停
 // ============================================================
+
+function _ensureEngines() {
+  if (!_store || !isWamMode()) return;
+  // monitor: setTimeout 链式循环 (非 setInterval, 避免堆积)
+  if (!_monitorTimer) {
+    const monitorInterval = () => Date.now() < _burstUntil ? BURST_MS : MONITOR_FAST_MS;
+    const scheduleMonitor = () => {
+      _monitorTimer = setTimeout(async () => {
+        await monitorActiveQuota();
+        if (_monitorTimer) scheduleMonitor(); // 仍活跃则继续
+      }, monitorInterval());
+    };
+    scheduleMonitor();
+    log('engine: monitor started');
+  }
+  // scan: setInterval 定时触发 (scanBackgroundQuota 自带 _scanRunning 防重入)
+  if (!_scanTimer) {
+    _scanTimer = setInterval(() => scanBackgroundQuota(), SCAN_SLOW_MS);
+    // 首次立即触发一轮
+    setTimeout(() => scanBackgroundQuota(), 2000);
+    log('engine: scan started');
+  }
+}
+
+function _stopEngines() {
+  if (_monitorTimer) { clearTimeout(_monitorTimer); _monitorTimer = null; log('engine: monitor stopped'); }
+  if (_scanTimer) { clearInterval(_scanTimer); _scanTimer = null; log('engine: scan stopped'); }
+}
 
 // 活跃账号实时监测 (快速循环, 每MONITOR_FAST_MS)
 async function monitorActiveQuota() {
@@ -2134,6 +2166,7 @@ async function handleWebviewMessage(msg) {
           _snapshotDirty = true; _schedulePersist();
           _store.save();
           vscode.window.showInformationMessage(`WAM: 已手动切换到 ${result.account} (${result.ms}ms)`);
+          _ensureEngines();
         } else {
           vscode.window.showErrorMessage(`WAM: 切换失败 — ${result.error}`);
         }
@@ -2675,6 +2708,7 @@ async function doAutoRotate(store) {
       store.switchCount++;
       const droughtTag = drought ? ' [干旱·D轮换]' : '';
       vscode.window.showInformationMessage(`WAM: 智能轮转到 ${result.account} (${result.ms}ms)${droughtTag}`);
+      _ensureEngines();
     } else {
       vscode.window.showErrorMessage(`WAM: 轮转失败 — ${result.error}`);
     }
@@ -2796,6 +2830,7 @@ function activate(context) {
             _quotaSnapshots.delete(acc.email.toLowerCase()); // 重置快照基准
             _snapshotDirty = true; _schedulePersist();
             vscode.window.showInformationMessage(`WAM: 已手动切换到 ${result.account}`);
+            _ensureEngines();
           } else {
             vscode.window.showErrorMessage(`WAM: ${result.error}`);
           }
@@ -2839,6 +2874,7 @@ function activate(context) {
           _quotaSnapshots.delete(acc.email.toLowerCase());
           _snapshotDirty = true; _schedulePersist();
           vscode.window.showInformationMessage(`WAM: 紧急切换到 ${result.account} (${result.ms}ms)`);
+          _ensureEngines();
         }
       } finally { _switching = false; refreshAll(); }
     }),
@@ -2932,7 +2968,7 @@ function activate(context) {
       vscode.commands.executeCommand('wam.injectToken');
     }
     // 监测引擎不再自动启动 — 用户手动切号/轮转时按需启动
-    log('startup: 纯切号模式 — 无自动登录/扫描/清理，监测引擎待用户操作后启动');
+    log('startup: 纯切号模式 — 无自动登录/扫描/清理，监测引擎待首次切号后自启动');
     updateStatusBar();
   }, 3000);
 }
@@ -2940,8 +2976,7 @@ function activate(context) {
 function deactivate() {
   if (_watcher) { _watcher.close(); _watcher = null; }
   if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
-  if (_monitorTimer) { clearTimeout(_monitorTimer); _monitorTimer = null; }
-  if (_scanTimer) { clearInterval(_scanTimer); _scanTimer = null; }
+  _stopEngines();
   if (_heartbeatTimer) { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
   if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
   if (_editorPanel) { _editorPanel.dispose(); _editorPanel = null; }
