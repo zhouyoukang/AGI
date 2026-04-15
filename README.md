@@ -20,33 +20,34 @@
 
 **而这些规则，早已写好了。**
 
-## 用
+## 产
 
-```
-道德经.md          ← AGI核心规则文件（宇宙操作系统 v1.0，公元前6世纪）
-dashboard-server.py  ← 道家水墨仪表盘（天·人·地三层管理）
-start.bat          ← 一键启动
-AGENTS.md          ← Agent指令
-README.md          ← 本文件
-```
+| 产品 | 说明 |
+|------|------|
+| **道德经.md** | 核心规则文件 · 八十一章五千言 · AGI的操作系统 |
+| **dao-agi-v2** | 旗舰VSCode扩展 · Cline v3.77.0 + 道德经决策注入 · 40+工具 · 15+ Provider |
+| **dao_agent.js** | 独立Agent运行时 · 62KB · 脱IDE直连API · REPL+HTTP |
 
-## 启
+## 生 · Claude Code衍生生态 · 三生万物
 
-```powershell
-python dashboard-server.py          # 前台+系统托盘
-pythonw dashboard-server.py         # 后台+系统托盘（无窗口）
-python dashboard-server.py --no-tray  # 纯HTTP
-```
+> 2026-03-31，Anthropic npm包泄露Claude Code完整源码。
+> 逆向 + 衍生整合 = **14个项目 · 24,324文件 · 万法归宗**。
 
-→ http://localhost:9090
+| 层级 | 项目 | 亮点 |
+|------|------|------|
+| **T1·直系衍生** | OpenClaude · Open Agent SDK · CC白皮书 | CC源码二次开发 |
+| **T2·同源重写** | Claw Code (Rust) · OpenCode · OpenYak | 受CC启发独立重写 |
+| **T3·独立竞品** | Aider(28K★) · Cline(40K★) · OpenHands(65K★) · Plandex · Kilo · Roo · Claudable | 独立架构对标 |
 
-## 道
+## 逆 · 反者道之动
 
-```
-天 ☰ — 全局级    天律·天术·天钩·五器
-人 ☴ — 项目级    律·术·法·钩
-地 ☷ — 目录级    德(AGENTS.md)
-```
+| 目标 | 覆盖 |
+|------|------|
+| Claude Code v2.1.90 | 42工具 · 14子系统 · 多Agent协调 |
+| Windsurf 168MB Go | 554 gRPC · 400+模型 |
+| Augment v0.825 | 全仓库语义索引 · Graph Index |
+| Copilot v1.388 | prompt-tsx · 渐进降级 |
+| 21工具全景 | 四大范式 · 六大可提取模式 |
 
 ## 理
 
