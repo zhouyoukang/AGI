@@ -1,0 +1,211 @@
+{
+  "name": "dao-security",
+  "displayName": "道·安全管理",
+  "description": "道法自然 — Security Hub 全栈守护: 状态栏+侧边树+命令集成。独立于托盘, 在VSCode内原生监控一切。",
+  "version": "1.1.0",
+  "publisher": "dao",
+  "license": "MIT",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "keywords": ["security", "monitoring", "daemon", "hub", "dao"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "dao-security",
+          "title": "道·安全",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "dao-security": [
+        {
+          "id": "dao.security.overview",
+          "name": "安全概览",
+          "icon": "$(shield)",
+          "contextualTitle": "道·安全管理"
+        },
+        {
+          "id": "dao.security.services",
+          "name": "服务守护",
+          "icon": "$(server-process)",
+          "contextualTitle": "道·服务守护"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "dao.security.refresh",
+        "title": "刷新",
+        "icon": "$(refresh)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.openDashboard",
+        "title": "打开仪表盘",
+        "icon": "$(browser)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.reloadCredentials",
+        "title": "重载凭据",
+        "icon": "$(key)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.startHub",
+        "title": "启动 Hub",
+        "icon": "$(play)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.stopHub",
+        "title": "停止 Hub",
+        "icon": "$(stop-circle)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.restartHub",
+        "title": "重启 Hub",
+        "icon": "$(debug-restart)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.startDaemon",
+        "title": "启动守护进程",
+        "icon": "$(run-all)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.stopDaemon",
+        "title": "停止守护进程",
+        "icon": "$(debug-stop)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.viewTrayLog",
+        "title": "查看托盘日志",
+        "icon": "$(output)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.viewDaemonLog",
+        "title": "查看守护日志",
+        "icon": "$(output)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.installAutostart",
+        "title": "安装开机自启",
+        "icon": "$(gear)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.copyItem",
+        "title": "复制",
+        "icon": "$(copy)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.forceBackup",
+        "title": "立即备份",
+        "icon": "$(cloud-upload)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.quarkSign",
+        "title": "夸克签到",
+        "icon": "$(star-empty)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.openConversations",
+        "title": "对话档案",
+        "icon": "$(comment-discussion)",
+        "category": "道·安全"
+      },
+      {
+        "command": "dao.security.viewTerminalLog",
+        "title": "查看终端日志",
+        "icon": "$(output)",
+        "category": "道·安全"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "dao.security.refresh",
+          "when": "view == dao.security.overview || view == dao.security.services",
+          "group": "navigation@1"
+        },
+        {
+          "command": "dao.security.openDashboard",
+          "when": "view == dao.security.overview",
+          "group": "navigation@2"
+        },
+        {
+          "command": "dao.security.restartHub",
+          "when": "view == dao.security.overview",
+          "group": "navigation@3"
+        },
+        {
+          "command": "dao.security.forceBackup",
+          "when": "view == dao.security.overview",
+          "group": "navigation@4"
+        }
+      ],
+      "commandPalette": [
+        { "command": "dao.security.refresh" },
+        { "command": "dao.security.openDashboard" },
+        { "command": "dao.security.reloadCredentials" },
+        { "command": "dao.security.startHub" },
+        { "command": "dao.security.stopHub" },
+        { "command": "dao.security.restartHub" },
+        { "command": "dao.security.startDaemon" },
+        { "command": "dao.security.stopDaemon" },
+        { "command": "dao.security.viewTrayLog" },
+        { "command": "dao.security.viewDaemonLog" },
+        { "command": "dao.security.installAutostart" },
+        { "command": "dao.security.forceBackup" },
+        { "command": "dao.security.quarkSign" },
+        { "command": "dao.security.openConversations" },
+        { "command": "dao.security.viewTerminalLog" }
+      ]
+    },
+    "configuration": {
+      "title": "道·安全管理",
+      "properties": {
+        "dao.security.hubUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:9877",
+          "description": "Security Hub URL (默认 :9877)"
+        },
+        "dao.security.pollInterval": {
+          "type": "number",
+          "default": 30000,
+          "description": "轮询间隔 (毫秒, 默认 30000)"
+        },
+        "dao.security.securityDir": {
+          "type": "string",
+          "default": "",
+          "description": "安全管理目录 (留空则自动检测)"
+        },
+        "dao.security.autoRefreshOnFocus": {
+          "type": "boolean",
+          "default": true,
+          "description": "窗口重新获得焦点时自动刷新"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "package": "vsce package --allow-missing-repository --no-git-tag-version",
+    "install-ext": "code --install-extension dao-security-1.1.0.vsix"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^2.22.0"
+  }
+}
