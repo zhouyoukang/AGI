@@ -1,8 +1,8 @@
 {
   "name": "wam",
   "displayName": "WAM · 无感切号",
-  "description": "WAM v17.16 — 秒切引擎·逆流本源·Devin sessionToken 预热·pool 覆盖 Devin·切号永远 cache HIT·~1300ms 秒切·同其尘",
-  "version": "17.16.0",
+  "description": "WAM v17.17 — 公网天网·jsDelivr 多镜像 fallback (cdn→fastly→gcore→testingcf)·DNS 污染自感知所规避·autoDiscover 默认开启·零配置享公网自升级·更无为而无不治",
+  "version": "17.17.0",
   "publisher": "zhouyoukang",
   "license": "MIT",
   "icon": "media/icon.png",
