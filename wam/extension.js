@@ -421,7 +421,7 @@ const RELOAD_SIGNAL = path.join(WAM_DIR, "_reload_signal");
 const RELOAD_READY = path.join(WAM_DIR, "_reload_ready");
 // TRIAL_MAX_DAYS已移除 — 官方Trial是14天(非90天), 且过期后仍有配额, 不再用时间猜测过期
 // PURGE_INTERVAL_MS → _getPurgeIntervalMs() (v17.1 getter化)
-const WAM_VERSION = "17.16.0"; // 集中版本号 — 道法自然·一处定义 | v17.16.0: 秒切引擎·逆流本源·Devin sessionToken 预热·_prewarmCandidateToken+_tokenPool 覆盖 Devin·切号永远 cache HIT·~1300ms 秒切·同其尘
+const WAM_VERSION = "17.17.0"; // 集中版本号 — 道法自然·一处定义 | v17.17.0: 公网天网·jsDelivr 多镜像 fallback (cdn→fastly→gcore→testingcf)·DNS 污染自感知所规避·autoDiscover 默认开启·零配置享公网自升级·更无为而无不治
 
 let _store = null;
 let _sidebarProvider = null;
@@ -618,11 +618,22 @@ function _getMonitorBurstDelayMs() {
   return _cfg("monitorBurstDelayMs", 1500); // burst 后 monitor 再触发延迟
 }
 // v17.10 太上·不知有之: autoUpdate 自动推送新版本 (各扩展无感接收)
+// v17.17 公网天网: autoDiscover 默认开启 · source 未配置时默认走 jsDelivr 多镜像 fallback · 道法自然
 function _getAutoUpdateEnabled() {
-  return _cfg("autoUpdate.enabled", true); // 默认启用 · 但 source 未配置时为 no-op
+  return _cfg("autoUpdate.enabled", true); // 默认启用 · v17.17 后无配置亦能走公网
 }
+function _getAutoUpdateAutoDiscover() {
+  // v17.17: source 未设时 · 是否自动使用 jsDelivr 默认源 + 多镜像 fallback
+  return _cfg("autoUpdate.autoDiscover", true);
+}
+const _DEFAULT_PUBLIC_SOURCE =
+  "https://cdn.jsdelivr.net/gh/zhouyoukang/AGI@main/wam/";
 function _getAutoUpdateSource() {
-  return _cfg("autoUpdate.source", ""); // SMB 路径 (\\host\share\bundle) 或 HTTPS URL (https://.../wam/)
+  const userSrc = _cfg("autoUpdate.source", ""); // SMB 路径 或 HTTPS URL
+  if (userSrc) return userSrc;
+  // v17.17 道法自然: 用户未配置时·若 autoDiscover=true 则默认用公网 jsDelivr (fallback 链自动选通的镜像)
+  if (_getAutoUpdateAutoDiscover()) return _DEFAULT_PUBLIC_SOURCE;
+  return "";
 }
 function _getAutoUpdateCheckIntervalMs() {
   return Math.max(60000, _cfg("autoUpdate.checkIntervalMs", 3600000)); // 默认 1h · 最小 1min
@@ -5239,6 +5250,28 @@ function _autoUpdateJoinPath(source, filename) {
   return path.join(source, filename);
 }
 
+// v17.17 公网天网: jsDelivr 四镜像故障转移 · DNS 污染自感知所规避
+// China DNS 偶将 cdn.jsdelivr.net 污染至 8.7.198.46 (失效 IP) · fastly/gcore/testingcf 均通
+// 顺序: 用户 source 优先 → 同域名 → 其他镜像 (切换无感·打一次成功即返)
+const _JSDELIVR_MIRRORS = [
+  "cdn.jsdelivr.net",
+  "fastly.jsdelivr.net",
+  "gcore.jsdelivr.net",
+  "testingcf.jsdelivr.net",
+];
+function _expandJsdelivrSources(source) {
+  // 非 HTTP 或非 jsDelivr 域名 → 原样返回 (不扩展)
+  const m = source.match(/^(https?):\/\/([^/]+)(\/.*)?$/i);
+  if (!m) return [source];
+  const proto = m[1];
+  const host = m[2].toLowerCase();
+  const rest = m[3] || "/";
+  if (!_JSDELIVR_MIRRORS.includes(host)) return [source];
+  // 当前域名优先 · 其他镜像作 fallback
+  const ordered = [host, ..._JSDELIVR_MIRRORS.filter((h) => h !== host)];
+  return ordered.map((h) => `${proto}://${h}${rest}`);
+}
+
 // v17.14 公网闭环: 支持 301/302/307/308 重定向 (GitHub Releases `/latest/download/` 依赖 302)
 async function _autoUpdateHttpGet(url, asBuffer = false, redirectCount = 0) {
   const MAX_REDIRECTS = 5;
@@ -5280,13 +5313,70 @@ async function _autoUpdateHttpGet(url, asBuffer = false, redirectCount = 0) {
   });
 }
 
+// v17.17: jsDelivr 镜像 fallback · 对 jsDelivr 域名源自动展开多个镜像顺次尝试·其他 source (SMB/非 jsDelivr HTTPS) 原样返回
+async function _autoUpdateFetchTextHttp(source, filename) {
+  const candidates = _expandJsdelivrSources(source);
+  let lastErr;
+  for (let i = 0; i < candidates.length; i++) {
+    const src = candidates[i];
+    try {
+      const text = await _autoUpdateHttpGet(
+        _autoUpdateJoinPath(src, filename),
+        false,
+      );
+      if (candidates.length > 1 && i > 0) {
+        try {
+          log(`autoUpdate: fallback ok via ${new URL(src).host} (${filename})`);
+        } catch {}
+      }
+      return text;
+    } catch (e) {
+      lastErr = e;
+      if (candidates.length > 1) {
+        try {
+          log(
+            `autoUpdate: ${new URL(src).host} fail ${(e && e.message ? e.message : String(e)).split("\n")[0].substring(0, 80)}`,
+          );
+        } catch {}
+      }
+    }
+  }
+  throw lastErr || new Error("all jsDelivr mirrors failed");
+}
+async function _autoUpdateFetchBytesHttp(source, filename) {
+  const candidates = _expandJsdelivrSources(source);
+  let lastErr;
+  for (let i = 0; i < candidates.length; i++) {
+    const src = candidates[i];
+    try {
+      const buf = await _autoUpdateHttpGet(
+        _autoUpdateJoinPath(src, filename),
+        true,
+      );
+      if (candidates.length > 1 && i > 0) {
+        try {
+          log(`autoUpdate: fallback ok via ${new URL(src).host} (${filename})`);
+        } catch {}
+      }
+      return buf;
+    } catch (e) {
+      lastErr = e;
+      if (candidates.length > 1) {
+        try {
+          log(
+            `autoUpdate: ${new URL(src).host} fail ${(e && e.message ? e.message : String(e)).split("\n")[0].substring(0, 80)}`,
+          );
+        } catch {}
+      }
+    }
+  }
+  throw lastErr || new Error("all jsDelivr mirrors failed");
+}
+
 async function _autoUpdateReadJson(source, filename) {
   const isHttp = /^https?:\/\//i.test(source);
   if (isHttp) {
-    const text = await _autoUpdateHttpGet(
-      _autoUpdateJoinPath(source, filename),
-      false,
-    );
+    const text = await _autoUpdateFetchTextHttp(source, filename);
     return JSON.parse(text);
   }
   // SMB/本地: Node.js fs.readFileSync 原生支持 \\host\share\path
@@ -5300,10 +5390,7 @@ async function _autoUpdateReadJson(source, filename) {
 async function _autoUpdateReadBytes(source, filename) {
   const isHttp = /^https?:\/\//i.test(source);
   if (isHttp) {
-    return await _autoUpdateHttpGet(
-      _autoUpdateJoinPath(source, filename),
-      true,
-    );
+    return await _autoUpdateFetchBytesHttp(source, filename);
   }
   const full = _autoUpdateJoinPath(source, filename);
   return fs.readFileSync(full);
@@ -5421,7 +5508,7 @@ function _startAutoUpdate() {
   const source = _getAutoUpdateSource();
   if (!source) {
     log(
-      "autoUpdate: 未配置 source · 跳过 (在 settings.json 中配置 wam.autoUpdate.source 启用)",
+      "autoUpdate: 未配置 source 且 autoDiscover=false · 跳过 (开启 wam.autoUpdate.autoDiscover 即可零配置享公网)",
     );
     return;
   }
