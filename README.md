@@ -14,6 +14,19 @@
 
 ---
 
+## 姊妹 · 用 · windsurf-assistant
+
+[`zhouyoukang/windsurf-assistant`](https://github.com/zhouyoukang/windsurf-assistant) — 此道德经在 Windsurf / Cascade 上之用.
+
+| 仓 | 位 | 职 |
+| --- | --- | --- |
+| [`AGI`](https://github.com/zhouyoukang/AGI) | 一 (本源) | 道德经 81 章 · 文本本体 |
+| [`windsurf-assistant`](https://github.com/zhouyoukang/windsurf-assistant) | 二 (用) | 道Agent 将其注入 Cascade system prompt · 化除 rules/skills/workflows/memories 侧信道 |
+
+道生一, 一生二.
+
+---
+
 *信言不美，美言不信。*
 *善者不辩，辩者不善。*
 *天之道，利而不害。*
