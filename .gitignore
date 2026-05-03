@@ -1,0 +1,78 @@
+# ============================================
+# Build artifacts (必须忽略)
+# ============================================
+*.apk
+*.ap_
+*.dex
+*.class
+*.aab
+bin/
+gen/
+out/
+proguard/
+.gradle/
+build/
+**/.gradle/
+**/.kotlin/
+**/build/
+**/out/
+**/captures/
+**/externalNativeBuild/
+**/.cxx/
+
+# ============================================
+# Local config (SDK paths, secrets)
+# ============================================
+local.properties
+fabric.properties
+google-services.json
+
+# ============================================
+# Signing / secrets / env
+# ============================================
+*.jks
+*.keystore
+keystore.properties
+*.pem
+*.key
+*.crt
+**/src/main/assets/server.p12
+.env
+.env.local
+.env.*.local
+secrets.env
+secrets.env.*
+*.env.bak
+tavily-keys.json
+.windsurf/tavily-keys.json
+.windsurf/backups/credentials/
+
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.pyc
+
+# ============================================
+# 安全网备份 (本地版本备份, 不入库)
+# ============================================
+*.bak
+*.王弼版.bak
+
+# ============================================
+# 安全管理运行时状态 (自动生成, 不入库)
+# ============================================
+安全管理/_*.json
+安全管理/_*.log
+安全管理/_*.flag
+安全管理/_wal_guardian_backups/
+安全管理/__pycache__/
+安全管理/terminal_watchdog.log
+安全管理/terminal_watchdog_v2.log
+# 对话追踪 — 永存目录全部排除 (会话数据含raw.pb, 本地永存, 不入git)
+# 数据安全由 dao_autosave + D/N盘镜像 + 179笔记本WinRM 三层保障
+Windsurf万法归宗/对话追踪/永存/
+Windsurf万法归宗/对话追踪/backup/
+Windsurf万法归宗/对话追踪/logs/
+# 兜底: 对话原始protobuf永远不入库 (逆向工程dumps/*.pb保留)
+Windsurf万法归宗/对话追踪/永存/**/*.pb
